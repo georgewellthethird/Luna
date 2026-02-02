@@ -1,1 +1,2427 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project LUNA: Moon Landing Anomaly Database</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --accent: #d4af37;
+            --accent-red: #c41e3a;
+            --text: #e0e0e0;
+            --text-dim: #888;
+            --border: #2a2a3a;
+            --classified: #ff0000;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0.3;
+        }
+
+        .header {
+            background: linear-gradient(180deg, #0f0f1a 0%, var(--bg-dark) 100%);
+            border-bottom: 2px solid var(--accent);
+            padding: 2rem 1rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .classified-stamp {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            border: 3px solid var(--classified);
+            color: var(--classified);
+            padding: 5px 15px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            transform: rotate(15deg);
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 0.3; }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            padding: 1rem;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        .controls {
+            padding: 2rem;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            cursor: pointer;
+            font-family: inherit;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .btn:hover {
+            background: var(--accent);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn.active {
+            background: var(--accent);
+            color: var(--bg-dark);
+        }
+
+        .btn.danger {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .btn.danger:hover {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .container {
+            padding: 2rem;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            min-width: 1200px;
+        }
+
+        thead {
+            background: var(--bg-card);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        th:hover {
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        th.sortable::after {
+            content: " ⇅";
+            opacity: 0.5;
+            font-size: 0.7rem;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        tr {
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        tbody tr:hover {
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        .theory-id {
+            color: var(--accent);
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .category {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid;
+        }
+
+        .cat-technical { color: #4fc3f7; border-color: #4fc3f7; }
+        .cat-photographic { color: #ff7043; border-color: #ff7043; }
+        .cat-physical { color: #66bb6a; border-color: #66bb6a; }
+        .cat-political { color: #ab47bc; border-color: #ab47bc; }
+        .cat-environmental { color: #ffca28; border-color: #ffca28; }
+        .cat-witness { color: #ef5350; border-color: #ef5350; }
+        .cat-historical { color: #8d6e63; border-color: #8d6e63; }
+
+        .severity {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .sev-high { background: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
+        .sev-medium { background: #ff9800; box-shadow: 0 0 10px #ff9800; }
+        .sev-low { background: #4caf50; }
+
+        .claim-text {
+            max-width: 400px;
+            line-height: 1.4;
+        }
+
+        .evidence-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            background: rgba(212, 175, 55, 0.2);
+            border: 1px solid var(--accent);
+            font-size: 0.7rem;
+            margin: 2px;
+            border-radius: 2px;
+        }
+
+        .debunked {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+
+        .expanded-row {
+            display: none;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .expanded-content {
+            padding: 2rem;
+            border-left: 3px solid var(--accent);
+            margin: 1rem 0;
+        }
+
+        .detail-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-label {
+            color: var(--accent);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .detail-text {
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        .sources {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .source-link {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px dotted var(--accent);
+            font-size: 0.8rem;
+        }
+
+        .redacted {
+            background: #000;
+            color: #000;
+            padding: 0 5px;
+            cursor: help;
+            transition: all 0.3s;
+        }
+
+        .redacted:hover {
+            background: transparent;
+            color: var(--text);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            padding: 2rem;
+            align-items: center;
+        }
+
+        .page-info {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 1.5rem; }
+            .controls { padding: 1rem; }
+            .search-box { min-width: 100%; }
+            .container { padding: 0.5rem; }
+            th, td { padding: 0.5rem; font-size: 0.8rem; }
+            .claim-text { max-width: 200px; }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="classified-stamp">TOP SECRET</div>
+        <h1>PROJECT LUNA</h1>
+        <div class="subtitle">Apollo Anomaly Database // Confidential Research Archive</div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-value" id="totalTheories">147</div>
+            <div class="stat-label">Total Theories</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="technicalCount">42</div>
+            <div class="stat-label">Technical</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="photoCount">38</div>
+            <div class="stat-label">Photographic</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="highSeverity">23</div>
+            <div class="stat-label">High Severity</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">1969-1972</div>
+            <div class="stat-label">Time Period</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="SEARCH DATABASE... (e.g., 'shadows', 'radiation', 'flag')">
+        </div>
+        <div class="filter-group">
+            <select id="categoryFilter">
+                <option value="">ALL CATEGORIES</option>
+                <option value="Technical">TECHNICAL</option>
+                <option value="Photographic">PHOTOGRAPHIC</option>
+                <option value="Physical">PHYSICAL</option>
+                <option value="Political">POLITICAL</option>
+                <option value="Environmental">ENVIRONMENTAL</option>
+                <option value="Witness">WITNESS TESTIMONY</option>
+                <option value="Historical">HISTORICAL</option>
+            </select>
+            <select id="severityFilter">
+                <option value="">ALL SEVERITY</option>
+                <option value="High">HIGH</option>
+                <option value="Medium">MEDIUM</option>
+                <option value="Low">LOW</option>
+            </select>
+            <button class="btn" onclick="exportCSV()">EXPORT CSV</button>
+            <button class="btn danger" onclick="toggleDebunked()">TOGGLE DEBUNKED</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <table id="theoryTable">
+            <thead>
+                <tr>
+                    <th class="sortable" onclick="sortTable(0)">ID</th>
+                    <th class="sortable" onclick="sortTable(1)">Category</th>
+                    <th class="sortable" onclick="sortTable(2)">Severity</th>
+                    <th>Conspiracy Claim</th>
+                    <th>Primary Evidence</th>
+                    <th>Counter-Evidence</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination">
+        <button class="btn" onclick="prevPage()">PREVIOUS</button>
+        <span class="page-info">Page <span id="currentPage">1</span> of <span id="totalPages">8</span></span>
+        <button class="btn" onclick="nextPage()">NEXT</button>
+    </div>
+
+    <script>
+        const theories = [
+            // PHOTOGRAPHIC ANOMALIES (1-40)
+            {
+                id: "LUNA-001",
+                category: "Photographic",
+                severity: "High",
+                claim: "Crosshair reticles appear BEHIND objects in photos, suggesting post-production compositing",
+                evidence: "AS11-40-5902, AS14-64-9089",
+                counter: "Overexposure causing white objects to bleed over thin black lines",
+                status: "Debunked",
+                details: "Conspiracy theorists claim that crosshair reticles (Reseau plates) visible in Apollo photos appear to be obscured by foreground objects, indicating the photos were doctored. NASA states this is due to overexposure in bright lunar conditions causing the thin crosses to be washed out by bright objects.",
+                proponent: "Bill Kaysing, Ralph Rene",
+                year: "1976"
+            },
+            {
+                id: "LUNA-002",
+                category: "Photographic",
+                severity: "High",
+                claim: "Shadows converge at different angles, proving multiple light sources (studio lights)",
+                evidence: "AS11-40-5931, AS14-68-9486",
+                counter: "Terrain undulations cause apparent angle changes; single source (sun)",
+                status: "Debunked",
+                details: "Multiple light sources would create diverging shadows. In photos, shadows appear to converge at different angles, suggesting studio lighting. Photography experts explain that uneven terrain creates this illusion - shadows on slopes appear at different angles relative to the camera.",
+                proponent: "David Percy, Marcus Allen",
+                year: "1997"
+            },
+            {
+                id: "LUNA-003",
+                category: "Photographic",
+                severity: "Medium",
+                claim: "No stars visible in any lunar surface photographs",
+                evidence: "All EVA photos",
+                counter: "Exposure settings too fast to capture dim stars against bright lunar surface",
+                status: "Debunked",
+                details: "Stars are dim and require long exposure times. The lunar surface is bright and requires fast shutter speeds (1/250 to 1/500 sec). Camera settings were optimized for the bright surface, not stars. Astronauts reported seeing stars visually.",
+                proponent: "Various",
+                year: "1969"
+            },
+            {
+                id: "LUNA-004",
+                category: "Photographic",
+                severity: "Medium",
+                claim: "Identical background hills in photos taken miles apart suggest backdrop",
+                evidence: "Apollo 16 EVA photos 1.6 miles apart",
+                counter: "Lunar terrain scale is deceptive; hills are miles distant",
+                status: "Debunked",
+                details: "Photos taken at different locations show identical hill profiles, suggesting a backdrop. However, on the moon with no atmospheric haze, distant objects appear closer. The hills were actually 3-5 miles away and miles high.",
+                proponent: "Bart Sibrel",
+                year: "2001"
+            },
+            {
+                id: "LUNA-005",
+                category: "Photographic",
+                severity: "Medium",
+                claim: "C-rock visible in photo proves stage prop labeling",
+                evidence: "AS16-107-17446",
+                counter: "Hair or fiber on film during development; object not in original negative",
+                status: "Debunked",
+                details: "A photo appears to show a rock labeled 'C' suggesting a stage prop. The 'C' is not present in the original transparency and appears to be a hair or fiber on a later print. The same photo without the C exists in archives.",
+                proponent: "Bart Sibrel",
+                year: "2001"
+            },
+            {
+                id: "LUNA-006",
+                category: "Photographic",
+                severity: "High",
+                claim: "Studio lights visible in astronaut helmet reflections",
+                evidence: "AS11-40-5924 (Buzz Aldrin helmet)",
+                counter: "LEM structure, equipment, and other astronaut reflected",
+                status: "Debunked",
+                details: "Helmet reflections show geometric shapes interpreted as studio lights. Analysis shows these are the LEM structure, the photographer (Armstrong), and equipment. The 'light' is the sun's reflection on the LEM.",
+                proponent: "Bart Sibrel",
+                year: "2001"
+            },
+            {
+                id: "LUNA-007",
+                category: "Photographic",
+                severity: "Medium",
+                claim: "Multiple light sources on astronaut's suit (front and back lit simultaneously)",
+                evidence: "AS11-40-5875 (Aldrin descending ladder)",
+                counter: "Ground reflection, LEM reflection, sun from behind camera",
+                status: "Debunked",
+                details: "Aldrin appears front-lit while in shadow of LEM. Conspiracists claim this requires fill lights. However, the lunar surface reflects sunlight effectively, acting as a fill light. The suit's reflective material also catches ambient light.",
+                proponent: "David Percy",
+                year: "1997"
+            },
+            {
+                id: "LUNA-008",
+                category: "Photographic",
+                severity: "Medium",
+                claim: "Wire harness visible on astronaut's back in slow-motion footage",
+                evidence: "Apollo 16 jump footage",
+                counter: "Life support backpack, portable life support system (PLSS)",
+                status: "Debunked",
+                details: "Wires appear to assist astronauts in jumping in reduced gravity. These are the Portable Life Support System (PLSS) backpack straps and antennas. The PLSS weighed 180 lbs on Earth but only 30 lbs on the moon.",
+                proponent: "Various",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-009",
+                category: "Photographic",
+                severity: "Low",
+                claim: "Same mountain backdrop used in Apollo 15, 16, and 17",
+                evidence: "Comparative panorama analysis",
+                counter: "Different mountains; similar lighting conditions create similar appearances",
+                status: "Debunked",
+                details: "Analysis claims the same 'painted' backdrop was used for multiple missions. Geographic features are distinct upon close inspection. The lack of atmospheric perspective makes distant objects look similar across locations.",
+                proponent: "Various",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-010",
+                category: "Photographic",
+                severity: "High",
+                claim: "Studio spotlights reflected in Gene Cernan's helmet visor (Apollo 17)",
+                evidence: "AS17-134-20384",
+                counter: "LEM structure and equipment reflection",
+                status: "Debunked",
+                details: "The final Apollo 17 photo shows a rectangular reflection in the visor interpreted as a studio light. Analysis identifies this as the reflection of the LEM's forward equipment bay and antenna arrays.",
+                proponent: "Various",
+                year: "2010s"
+            },
+            {
+                id: "LUNA-011",
+                category: "Photographic",
+                severity: "Medium",
+                claim: "Objects appear translucent in photos (double exposure evidence)",
+                evidence: "LEM appears see-through in some images",
+                counter: "Film processing defects, overexposure",
+                status: "Debunked",
+                details: "Some photos show the LEM or astronauts with translucent edges, suggesting double exposure compositing. Photo experts identify these as film processing defects, light leaks, or overexposure during development.",
+                proponent: "Various",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-012",
+                category: "Photographic",
+                severity: "Medium",
+                claim: "Lettering visible on 'rocks' proves props",
+                evidence: "AS15-87-11839",
+                counter: " pareidolia; natural mineral formations",
+                status: "Debunked",
+                details: "Photos appear to show letters like 'C' or 'S' on rocks, interpreted as prop markings. Geologists identify these as natural mineral veins and fracture patterns in anorthosite rock that resemble lettering.",
+                proponent: "YouTube analysts",
+                year: "2015"
+            },
+            {
+                id: "LUNA-013",
+                category: "Photographic",
+                severity: "High",
+                claim: "Slow-motion photography used to simulate 1/6 gravity",
+                evidence: "50% speed analysis shows Earth gravity motion",
+                counter: "Increased stride length, dust hang time proves reduced gravity",
+                status: "Debunked",
+                details: "Video analysis claims footage was filmed at 2x speed then played slow to simulate low gravity. However, dust kicked up hangs in the air longer than Earth gravity allows, and stride length calculations confirm 1/6 g.",
+                proponent: "Various",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-014",
+                category: "Photographic",
+                severity: "Medium",
+                claim: "Scotch tape visible holding down cables on 'moon set'",
+                evidence: "Apollo 17 footage",
+                counter: "Foil tape used on equipment, not scotch tape",
+                status: "Misidentified",
+                details: "Silver tape visible on equipment is claimed to be scotch tape. This is actually metallic foil tape used for thermal management and securing cables, consistent with space mission equipment.",
+                proponent: "Social media",
+                year: "2020"
+            },
+            {
+                id: "LUNA-015",
+                category: "Photographic",
+                severity: "Low",
+                claim: "Camera crosshairs rotated between photos proving composite images",
+                evidence: "Crosshair alignment comparison",
+                counter: "Cameras were rotated between shots; crosshairs fixed to lens",
+                status: "Debunked",
+                details: "Crosshairs appear at different angles in different photos, suggesting multiple images composited. The Hasselblad cameras were handheld and rotated between shots; the crosshairs are fixed to the lens and rotate with the camera body.",
+                proponent: "Various",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-016",
+                category: "Photographic",
+                severity: "High",
+                claim: "Earth photos show identical cloud patterns hours apart",
+                evidence: "AS11-44-6547 vs AS11-44-6551",
+                counter: "Time stamps show 2-hour difference; Earth rotates slowly from moon",
+                status: "Debunked",
+                details: "Photos of Earth taken hours apart show nearly identical cloud formations. From the moon, Earth appears nearly stationary and rotates slowly (one rotation per month from lunar perspective). 2 hours is minimal change.",
+                proponent: "Conspiracy forums",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-017",
+                category: "Photographic",
+                severity: "Medium",
+                claim: "Lack of exhaust flame from LEM ascent stage proves fake",
+                evidence: "Apollo 11 liftoff footage",
+                counter: "Rocket exhaust is transparent in vacuum; no atmosphere to glow",
+                counter: "Fuel (Aerozine 50) produces clear exhaust in vacuum",
+                status: "Debunked",
+                details: "The LEM ascent shows no visible exhaust flame. In Earth's atmosphere, exhaust glows due to combustion with air. In vacuum, rocket exhaust expands immediately and is transparent. The fuel combination also burns relatively clear.",
+                proponent: "Bart Sibrel",
+                year: "2001"
+            },
+            {
+                id: "LUNA-018",
+                category: "Photographic",
+                severity: "Low",
+                claim: "Astronauts visible in shadow without helmet lights despite darkness",
+                evidence: "Shadow photography during EVA",
+                counter: "Surface reflection, long exposure photography",
+                status: "Debunked",
+                details: "Astronauts in shadow are clearly visible without helmet lights. The lunar surface reflects approximately 12% of sunlight, providing significant fill light in shadowed areas. Long exposures also capture more light.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-019",
+                category: "Photographic",
+                severity: "Medium",
+                claim: "Props visible in background including cardboard cutouts",
+                evidence: "Apollo 15 photos",
+                counter: "Photographic anomalies, pareidolia",
+                status: "Debunked",
+                details: "Claims of cardboard cutouts and props visible in the background of lunar photos. These are typically photographic processing defects, lens flare, or pareidolia (seeing patterns in random data).",
+                proponent: "YouTube channels",
+                year: "2010s"
+            },
+            {
+                id: "LUNA-020",
+                category: "Photographic",
+                severity: "High",
+                claim: "Lunar module appears to be made of paper, tape, and foil",
+                evidence: "Close-up photos of LM exterior",
+                counter: "Mylar thermal blankets, Kapton tape, lightweight construction required for mass ratios",
+                status: "Misunderstood",
+                details: "The LM exterior appears to be covered in gold foil and tape, looking 'fake.' This is Mylar thermal insulation and Kapton tape, necessary for thermal management. The LM was built extremely lightweight (skin thickness 0.012 inches in places) to save weight.",
+                proponent: "First-time observers",
+                year: "1969"
+            },
+
+            // TECHNICAL IMPOSSIBILITIES (21-60)
+            {
+                id: "LUNA-021",
+                category: "Technical",
+                severity: "High",
+                claim: "Van Allen radiation belts would have fried the astronauts with 100+ rads/hour",
+                evidence: "Van Allen belt measurements, SPE radiation events",
+                counter: "Traversed belts quickly (1 hour total), spacecraft shielding sufficient for short duration",
+                status: "Contested",
+                details: "The Van Allen belts contain high concentrations of energetic particles. Skeptics argue the radiation dosage would have been lethal or at least caused severe health effects. NASA claims the trajectory was calculated to minimize exposure and the aluminum hull provided sufficient protection for the short transit time.",
+                proponent: "Bart Sibrel, Bill Kaysing",
+                year: "1970"
+            },
+            {
+                id: "LUNA-022",
+                category: "Technical",
+                severity: "High",
+                claim: "LEM engine was silent in audio recordings despite 10,000 lb thrust",
+                evidence: "Apollo 11 landing audio",
+                counter: "Microphones inside pressure suits, engine sound doesn't transmit through vacuum",
+                status: "Debunked",
+                details: "The descent engine should have produced deafening noise. Audio recordings show only radio chatter. Sound requires a medium (air) to travel; the vacuum of space cannot transmit sound waves. Astronauts were also isolated in pressurized suits.",
+                proponent: "Bart Sibrel",
+                year: "2001"
+            },
+            {
+                id: "LUNA-023",
+                category: "Technical",
+                severity: "High",
+                claim: "Technology in 1969 insufficient for computer guidance (less power than calculator)",
+                evidence: "AGC specs: 74KB memory, 1MHz processor",
+                counter: "Specialized real-time OS, redundant systems, manual override capability",
+                status: "Debunked",
+                details: "The Apollo Guidance Computer had 74KB memory and 1MHz speed. While primitive by modern standards, it was specialized for specific tasks using hardwired memory (core rope memory) and extremely efficient coding. The MIT team developed a priority scheduling system.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-024",
+                category: "Technical",
+                severity: "High",
+                claim: "LEM ascent stage had no fuel to achieve lunar orbit and rendezvous",
+                evidence: "2,600 kg propellant, 4,700 kg required by skeptics",
+                counter: "Calculated delta-V sufficient; 2.2 km/s required, engine provided 2.5 km/s",
+                status: "Debunked",
+                details: "Critics calculated that the LEM ascent stage couldn't reach orbit with 2,600kg fuel. However, lunar gravity is 1/6 Earth, and the required velocity change (delta-V) was 1.8 km/s. The Aerojet AJ10 engine provided sufficient thrust.",
+                proponent: "Bill Kaysing, Ralph Rene",
+                year: "1976"
+            },
+            {
+                id: "LUNA-025",
+                category: "Technical",
+                severity: "High",
+                claim: "NASA admitted they 'lost' original telemetry tapes and SSTV recordings",
+                evidence: "2006 NASA search for tapes",
+                counter: "Tapes were erased and reused due to shortage; backups exist",
+                status: "Confirmed Lost",
+                details: "In 2006, NASA admitted original Apollo 11 slow-scan TV tapes and telemetry are missing. They were likely erased and reused in the 1970s-80s due to tape shortages. TV conversions and lower-quality backups exist.",
+                proponent: "Conspiracy theorists",
+                year: "2006"
+            },
+            {
+                id: "LUNA-026",
+                category: "Technical",
+                severity: "High",
+                claim: "Soviet Union tracked Apollo but kept silent due to blackmail (grain shipments)",
+                evidence: "Apollo-Soyuz 1975, grain deals",
+                counter: "Soviets tracked spacecraft but couldn't verify landing; would have exposed fakery if possible",
+                status: "Speculative",
+                details: "Theory claims USSR knew it was fake but was blackmailed with grain/technology. In reality, USSR tracked radio signals but couldn't visually confirm landing sites from Earth. They had incentive to expose hoax but couldn't prove it.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-027",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Air conditioning units visible in photos (Australia trip 1969)",
+                evidence: "Apollo 11 post-mission photos",
+                counter: "Film equipment cases, not AC units",
+                status: "Debunked",
+                details: "Photos from the Apollo 11 world tour show boxes labeled 'Air Conditioner' in the background. These were actually cases for film equipment and samples, not evidence of studio cooling systems.",
+                proponent: "Various",
+                year: "1969"
+            },
+            {
+                id: "LUNA-028",
+                category: "Technical",
+                severity: "High",
+                claim: "NASA rover tire tracks appear before the rover was deployed",
+                evidence: "Apollo 16 and 17 photos",
+                counter: "Rovers were unfolded from LEM bay; tracks made during deployment",
+                status: "Debunked",
+                details: "Photos show rover tracks in the lunar surface before the rover appears in the frame. The rover was stored folded in the LEM descent stage quadrant. As it was manually unfolded and lowered, it left tracks before being photographed.",
+                proponent: "YouTube videos",
+                year: "2010s"
+            },
+            {
+                id: "LUNA-029",
+                category: "Technical",
+                severity: "High",
+                claim: "Nixon's phone call to moon had no delay (instantaneous communication)",
+                evidence: "Apollo 11 call recording",
+                counter: "Recording edited for broadcast; original had 2.6 second delay",
+                status: "Debunked",
+                details: "The presidential phone call appears to have no delay. However, the broadcast version was edited. The original transmission had the expected 2.6 second round-trip radio delay (1.3 seconds each way).",
+                proponent: "Bart Sibrel",
+                year: "2001"
+            },
+            {
+                id: "LUNA-030",
+                category: "Technical",
+                severity: "Medium",
+                claim: "LEM windows were too small to see landing site during descent",
+                evidence: "Window dimensions vs descent angle",
+                counter: "Astronauts stood during descent; windows angled downward",
+                status: "Misleading",
+                details: "The LEM windows were small (12 inches). Critics claim astronauts couldn't see the landing site. However, the windows were angled downward and astronauts stood during the final phase, allowing visibility of the surface.",
+                proponent: "Various",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-031",
+                category: "Technical",
+                severity: "Medium",
+                claim: "LM docking mechanism couldn't align in 1/6 gravity with no computer assist",
+                evidence: "Manual docking requirements",
+                counter: "Visual alignment, training in simulators, 24 practice missions",
+                status: "Debunked",
+                details: "Skeptics claim manual docking in lunar orbit was impossible without modern computer assistance. Astronauts practiced extensively in simulators and used visual alignment cues. The docking mechanism was designed for manual operation.",
+                proponent: "Bill Kaysing",
+                year: "1976"
+            },
+            {
+                id: "LUNA-032",
+                category: "Technical",
+                severity: "High",
+                claim: "Fuel cells couldn't provide enough power for 3-day missions in extreme temperatures",
+                evidence: "Fuel cell specs vs power requirements",
+                counter: "Fuel cells operated at 80% efficiency; batteries supplemented power",
+                status: "Debunked",
+                details: "The hydrogen-oxygen fuel cells had to provide power for life support, communications, and guidance. Critics claim power requirements exceeded capacity. In reality, the fuel cells were highly efficient and supplemented by rechargeable batteries during peak loads.",
+                proponent: "Ralph Rene",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-033",
+                category: "Technical",
+                severity: "High",
+                claim: "Suit cooling system couldn't function in 120°C vacuum",
+                evidence: "Liquid Cooling Garment specifications",
+                counter: "Water cooling circulated through suit; sublimator dumped heat to vacuum",
+                status: "Debunked",
+                details: "The Liquid Cooling Garment (LCG) circulated water through tubes to remove body heat. A sublimator exposed ice to vacuum, causing sublimation (direct solid to gas) which removed heat energy. This system worked effectively in vacuum.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-034",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Hasselblad cameras would have seized in vacuum due to lubricant boiling off",
+                evidence: "Camera lubrication requirements",
+                counter: "Special low-vapor-pressure lubricants used; cameras modified for vacuum",
+                status: "Debunked",
+                details: "Standard camera lubricants would boil off in vacuum. Hasselblad modified the cameras with special low-vapor-pressure lubricants and removed all air from the mechanism. The cameras were tested extensively in vacuum chambers.",
+                proponent: "Photography skeptics",
+                year: "1980s"
+            },
+            {
+                id: "LUNA-035",
+                category: "Technical",
+                severity: "High",
+                claim: "Parabolic flights in Earth's atmosphere couldn't train for 1/6 gravity",
+                evidence: "Vomit Comet provides 25 seconds of weightlessness, not 1/6 g",
+                counter: "Simulation combined with underwater training (neutral buoyancy) and mechanical simulations",
+                status: "Partially True",
+                details: "The 'Vomit Comet' KC-135 provided only 25-second bursts of weightlessness (0g), not 1/6 g. Training combined parabolic flights (for procedure familiarity), underwater neutral buoyancy simulation (for movement), and 1/6 g simulation using inclined planes and harnesses.",
+                proponent: "Bill Kaysing",
+                year: "1976"
+            },
+            {
+                id: "LUNA-036",
+                category: "Technical",
+                severity: "High",
+                claim: "Rocket exhaust in LEM ascent should have created massive crater",
+                evidence: "No disturbance under ascent stage",
+                counter: "Engine nozzle extension, low thrust in final stage, compacted regolith",
+                status: "Contested",
+                details: "The ascent engine produced 3,500 lbs thrust. Critics argue this should have excavated the surface beneath. The engine had a nozzle extension that directed thrust outward, and the regolith was already compacted by the descent engine.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-037",
+                category: "Technical",
+                severity: "Medium",
+                claim: "CSM engine couldn't slow down for lunar orbit insertion (LOI) with available fuel",
+                evidence: "Service Propulsion System delta-V requirements",
+                counter: "Precise calculations, jettisoning of excess mass, efficient trajectory",
+                status: "Debunked",
+                details: "The Service Propulsion System needed to slow the CSM by 1,000 m/s to enter lunar orbit. Skeptics claim fuel was insufficient. NASA engineers calculated precise burn durations and the CSM jettisoned unneeded modules before LOI to reduce mass.",
+                proponent: "Rocket skeptics",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-038",
+                category: "Technical",
+                severity: "High",
+                claim: "TV transmission quality too perfect for 240,000 mile distance in 1969",
+                evidence: "SSTV conversion quality",
+                counter: "Slow-scan TV (10 fps, 320 lines) converted to NTSC for broadcast; signal strength sufficient",
+                status: "Debunked",
+                details: "The original signal was Slow-Scan TV (SSTV) at 10 frames per second, 320 lines. This was converted to commercial NTSC (30 fps, 525 lines) at ground stations, resulting in the 'perfect' broadcast quality. The original signal was actually low quality.",
+                proponent: "TV engineers",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-039",
+                category: "Technical",
+                severity: "High",
+                claim: "Astronauts couldn't survive the temperature extremes (120°C day, -173°C night)",
+                evidence: "Suit temperature regulation specs",
+                counter: "EVAs conducted during lunar morning (moderate temps); suits insulated with reflective layers",
+                status: "Debunked",
+                details: "While the moon has extreme temperatures, EVAs were scheduled during lunar morning when temperatures were moderate (-20°C to +40°C). The space suits had reflective outer layers, insulation, and active cooling systems to handle thermal loads.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-040",
+                category: "Technical",
+                severity: "High",
+                claim: "NASA can't return to moon because they destroyed the technology",
+                evidence: "Don Pettit quote: 'We destroyed that technology'",
+                counter: "Pettit referring to infrastructure, not blueprints; SLS/Artemis exists",
+                status: "Misquoted",
+                details: "Astronaut Don Pettit said 'We destroyed that technology' regarding going to the moon. Conspiracy theorists claim he admitted we never went. Pettit meant the industrial infrastructure (factories, supply chains) was dismantled, not the knowledge.",
+                proponent: "YouTube edits",
+                year: "2010s"
+            },
+
+            // PHYSICAL EVIDENCE (41-75)
+            {
+                id: "LUNA-041",
+                category: "Physical",
+                severity: "Medium",
+                claim: "Lunar dust is too fine to support the LEM without creating massive blast craters",
+                evidence: "LEM landing photos show no disturbance under lander",
+                counter: "Low gravity, no atmosphere, thrust cut off before contact",
+                status: "Partially Debunked",
+                details: "The Lunar Excursion Module (LEM) descent engine produced 3,000 pounds of thrust. Critics argue this should have created a massive crater and scattered dust over the landing site. NASA explains that in vacuum, exhaust disperses differently and the engine was throttled down before landing.",
+                proponent: "Various",
+                year: "1969"
+            },
+            {
+                id: "LUNA-042",
+                category: "Physical",
+                severity: "Medium",
+                claim: "Flag appears to wave in wind despite no atmosphere on moon",
+                evidence: "Apollo 11 planting footage",
+                counter: "Inertia from planting, horizontal rod holding flag top",
+                status: "Debunked",
+                details: "The planted flag appears to ripple and wave as astronauts move around it. Without air resistance, this shouldn't happen. The flag was mounted on a horizontal rod to make it appear flying. Ripples are from the fabric being twisted during storage and the rod bouncing.",
+                proponent: "Bill Kaysing",
+                year: "1974"
+            },
+            {
+                id: "LUNA-043",
+                category: "Physical",
+                severity: "High",
+                claim: "Moon rocks given to Dutch PM turned out to be petrified wood (2009)",
+                evidence: "Rijksmuseum rock analysis",
+                counter: "Private gift, not NASA official; mix-up occurred later",
+                status: "Verified Fake (but not NASA)",
+                details: "A 'moon rock' given to Dutch PM Willem Drees in 1969 was found to be petrified wood in 2009. However, this was a private gift from US Ambassador Middendorf, not an official NASA sample. Real NASA samples given to Netherlands are accounted for.",
+                proponent: "Media reports",
+                year: "2009"
+            },
+            {
+                id: "LUNA-044",
+                category: "Physical",
+                severity: "High",
+                claim: "Lunar samples contain processed metals impossible to form naturally",
+                evidence: "Rust, brass, mica in samples",
+                counter: "Contamination during handling on Earth; misidentified terrestrial minerals",
+                status: "Contested",
+                details: "Some analyses claim moon rocks contain brass, rust, and processed metals. NASA claims contamination during handling or misidentification. Independent analysis confirms samples are anhydrous and unlike terrestrial rocks.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-045",
+                category: "Physical",
+                severity: "Medium",
+                claim: "Footprints remain despite 4,000 lb thrust engine firing nearby",
+                evidence: "Footprints directly next to LEM pad",
+                counter: "Engine cut off 10 feet above surface; thrust dispersed in vacuum",
+                status: "Contested",
+                details: "Footprints exist directly next to the LEM descent stage despite the engine supposedly blasting the surface. NASA claims the engine cutoff was 10 feet up and in vacuum, exhaust disperses rapidly, but skeptics argue dust should still be displaced.",
+                proponent: "Bart Sibrel",
+                year: "2001"
+            },
+            {
+                id: "LUNA-046",
+                category: "Physical",
+                severity: "Medium",
+                claim: "Lunar bootprints too well defined for dust with no moisture",
+                evidence: "Sharp bootprints in regolith",
+                counter: "Regolith is jagged, interlocking particles; compacts easily",
+                status: "Debunked",
+                details: "Moisture helps soil cohere on Earth. Lunar regolith is angular and jagged due to lack of erosion, allowing particles to lock together. The pressure of the boot compacts the particles, preserving the sharp impression.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-047",
+                category: "Physical",
+                severity: "Medium",
+                claim: "Lunar surface temperature (120°C) would have melted camera film and boots",
+                evidence: "Surface temp +120°C, Hasselblad film rated to 70°C",
+                counter: "Insulated cameras, reflective surfaces, EVAs during lunar morning (cooler)",
+                status: "Partially Debunked",
+                details: "Surface reaches 120°C at noon. Film melts at 70°C. However, cameras were painted silver, kept in shadow when possible, and EVAs were scheduled during lunar morning (40-60°C). Kodak developed specialized Ektachrome film.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-048",
+                category: "Physical",
+                severity: "High",
+                claim: "Astronauts would have been instantly blinded looking at lunar surface without atmosphere",
+                evidence: "Albedo 0.12, UV exposure",
+                counter: "Gold visors filtered 90% of light and all UV; pupils adjusted",
+                status: "Debunked",
+                details: "The lunar surface reflects 12% of sunlight (similar to asphalt). Astronauts wore gold-plated visors that filtered 90% of visible light and 100% of UV/infrared. Camera settings also account for bright conditions.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-049",
+                category: "Physical",
+                severity: "Medium",
+                claim: "Astronauts should have been killed by micrometeoroid impacts",
+                evidence: "1 in 20 chance of hull penetration per hour",
+                counter: "Short EVA duration (2-3 hours), suits had 6 layers including Kevlar",
+                status: "Statistically unlikely",
+                details: "Micrometeoroids travel at 20-70 km/s. Probability of hitting a 2m2 target in 2 hours was calculated at 1 in 20. However, the lunar modules and suits were multi-layered with aluminum, Mylar, and Kevlar for protection.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-050",
+                category: "Physical",
+                severity: "Medium",
+                claim: "Solar flares during Apollo missions would have killed astronauts",
+                evidence: "August 1972 solar flare (between Apollo 16 and 17)",
+                counter: "No major flares during EVAs; spacecraft provided some shielding",
+                status: "Partially True",
+                details: "A massive solar flare occurred in August 1972 between missions. Had it occurred during an EVA, astronauts would have received lethal radiation. This is used to suggest they weren't actually exposed to space. However, no major flares occurred during any EVA window.",
+                proponent: "Various",
+                year: "1972"
+            },
+            {
+                id: "LUNA-051",
+                category: "Physical",
+                severity: "Low",
+                claim: "Dust on astronaut boots doesn't match lunar soil composition",
+                evidence: "Boot dust analysis claims",
+                counter: "Lunar regolith contains glass beads and agglutinates that appear different under magnification",
+                status: "Debunked",
+                details: "Analysis of dust on returned boots claims it matches terrestrial desert sand. However, lunar regolith contains microscopic glass beads formed by meteorite impacts (agglutinates) that distinguish it from terrestrial material.",
+                proponent: "Internet forums",
+                year: "2010s"
+            },
+            {
+                id: "LUNA-052",
+                category: "Physical",
+                severity: "High",
+                claim: "Lunar rocks contain water and hydrated minerals (impossible on airless moon)",
+                evidence: "Recent analysis shows water in lunar samples",
+                counter: "Water exists in permanently shadowed regions; solar wind creates hydroxyl",
+                status: "Updated Science",
+                details: "Early analysis claimed moon rocks were completely anhydrous. Modern analysis finds trace water and hydroxyl. This is now understood to come from solar wind implantation and cometary deposits, not evidence of terrestrial contamination.",
+                proponent: "Modern skeptics",
+                year: "2010s"
+            },
+            {
+                id: "LUNA-053",
+                category: "Physical",
+                severity: "Medium",
+                claim: "LEM landing pads show no dust accumulation after landing",
+                evidence: "Clean landing struts in photos",
+                counter: "Descent stage was above the dust cloud; minimal dust resettled on top",
+                status: "Debunked",
+                details: "The LEM landing pads appear clean in photos, suggesting they were never in dust. The descent stage hovered above the surface during final landing, and the dust cloud dispersed outward, not upward onto the pads.",
+                proponent: "Bart Sibrel",
+                year: "2001"
+            },
+            {
+                id: "LUNA-054",
+                category: "Physical",
+                severity: "Low",
+                claim: "Astronauts' boots would have been worn through by abrasive lunar dust",
+                evidence: "Regolith sharpness analysis",
+                counter: "Boots had silicone rubber soles with additional layers; limited walking distance",
+                status: "Debunked",
+                details: "Lunar dust is extremely abrasive (microscopic glass shards). However, the space suit boots had thick silicone rubber soles with additional protective layers. Total walking distance per EVA was limited to 1-2 miles.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-055",
+                category: "Physical",
+                severity: "High",
+                claim: "Hammer and feather drop proves wire work, not vacuum physics",
+                evidence: "Apollo 15 Galileo experiment footage",
+                counter: "Demonstration of equivalence principle in vacuum; no air resistance",
+                status: "Debunked",
+                details: "David Scott dropped a hammer and feather that fell at the same rate. Skeptics claim wires were used. In vacuum, without air resistance, all objects fall at the same rate regardless of mass (Galileo's equivalence principle).",
+                proponent: "Physics deniers",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-056",
+                category: "Physical",
+                severity: "Medium",
+                claim: "Lunar rover tires would have exploded in vacuum without air",
+                evidence: "Wire mesh tire design",
+                counter: "Tires were wire mesh with zinc coating, no air pressure required",
+                status: "Debunked",
+                details: "The lunar rover used wire mesh tires (woven piano wire with zinc coating) that required no air pressure. This design was specifically chosen to avoid puncture and explosion risks in the lunar environment.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-057",
+                category: "Physical",
+                severity: "Medium",
+                claim: "Astronauts' gloves were too stiff to operate cameras precisely",
+                evidence: "EVA glove specifications",
+                counter: "Cameras modified for gloved hands; astronauts trained extensively",
+                status: "Debunked",
+                details: "The pressurized gloves were stiff and difficult to move. However, Hasselblad cameras were modified with large levers and buttons for gloved operation. Astronauts trained for hundreds of hours in pressurized gloves.",
+                proponent: "Photography skeptics",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-058",
+                category: "Physical",
+                severity: "Low",
+                claim: "Shadows appear translucent in high-contrast photos",
+                evidence: "Shadow edge analysis",
+                counter: "Optical scattering in camera lens; high dynamic range of film",
+                status: "Debunked",
+                details: "Some shadows appear semi-transparent or glowing at the edges. This is due to light scattering in the camera lens (halation) and the high dynamic range of the film capturing subtle reflected light in shadowed areas.",
+                proponent: "Photo analysts",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-059",
+                category: "Physical",
+                severity: "High",
+                claim: "Laser retroreflectors could have been placed by unmanned probes",
+                evidence: "Lunokhod rovers also carried retroreflectors",
+                counter: "Apollo arrays are 100x larger and return stronger signal; distinct signature",
+                status: "Alternative Theory",
+                details: "Skeptics suggest the laser retroreflectors (used to measure Earth-moon distance) could have been placed by unmanned missions. While the Soviet Lunokhod rovers carried small reflectors, the Apollo arrays are significantly larger (100 prisms vs 14) and produce a distinct signal.",
+                proponent: "Various",
+                year: "1980s"
+            },
+            {
+                id: "LUNA-060",
+                category: "Physical",
+                severity: "Medium",
+                claim: "Lunar samples contain fossilized Earth bacteria (contamination proof)",
+                evidence: "Bacterial analysis of sample 76016",
+                counter: "Post-mission contamination during handling on Earth",
+                status: "Contested",
+                details: "Some samples were found to contain bacteria upon return. NASA claims this is Earth contamination during handling. Skeptics argue this proves the rocks were never sterilized by space radiation. Bacteria were found on samples bag exterior, not interior.",
+                proponent: "Various",
+                year: "1970s"
+            },
+
+            // POLITICAL/CONSPIRACY (61-90)
+            {
+                id: "LUNA-061",
+                category: "Political",
+                severity: "High",
+                claim: "Kubrick filmed fake footage using front projection from '2001: A Space Odyssey' sets",
+                evidence: "Shining contains Apollo references, NASA-Kubrick connection",
+                counter: "No evidence of collaboration; slow-motion physics impossible to fake in 1969",
+                status: "Speculative",
+                details: "Theory claims Stanley Kubrick helped fake footage using front projection and sets left over from 2001. Allegedly confessed in 'The Shining' (room 237 = 237,000 miles to moon). No concrete evidence exists of Kubrick involvement.",
+                proponent: "William Cooper, Jay Weidner",
+                year: "1995"
+            },
+            {
+                id: "LUNA-062",
+                category: "Political",
+                severity: "High",
+                claim: "Nazi scientists (Operation Paperclip) faked program to secure funding",
+                evidence: "Wernher von Braun, 115 German scientists at NASA",
+                counter: "Von Braun was rocket engineer, not in charge of photography/footage",
+                status: "Speculative",
+                details: "Theory suggests von Braun and German scientists faked the landing to ensure continued military funding. Von Braun was instrumental in rocket design but had no authority over photographic operations or astronaut training.",
+                proponent: "Alternative historians",
+                year: "1980s"
+            },
+            {
+                id: "LUNA-063",
+                category: "Political",
+                severity: "High",
+                claim: "Nixon prepared 'contingency speech' in case astronauts died on moon",
+                evidence: "Draft speech found in National Archives",
+                counter: "Standard protocol for high-risk missions; doesn't prove fakery",
+                status: "Confirmed Real (not suspicious)",
+                details: "A speech drafted for Nixon in case astronauts were stranded on the moon was found. This is standard contingency planning for high-risk government operations, not evidence of anticipated failure or fakery.",
+                proponent: "Various",
+                year: "1999"
+            },
+            {
+                id: "LUNA-064",
+                category: "Political",
+                severity: "High",
+                claim: "CIA compartmentalized the hoax using 'need to know' protocols",
+                evidence: "Military-industrial complex documentation",
+                counter: "Too many people required for cover-up; no whistleblowers in 50 years",
+                status: "Speculative",
+                details: "Theory suggests only top NASA officials knew the truth, while engineers and astronauts were compartmentalized. Critics argue over 400,000 people worked on Apollo; maintaining secrecy for 50+ years without credible whistleblowers is impossible.",
+                proponent: "Conspiracy theorists",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-065",
+                category: "Political",
+                severity: "High",
+                claim: "Masons infiltrated NASA to stage ritual on moon (Buzz Aldrin carried Scottish Rite flag)",
+                evidence: "Aldrin's Masonic apron, flag ceremony",
+                counter: "Aldrin was a Mason, but no evidence of institutional conspiracy; personal religious freedom",
+                status: "Verified Symbolism (not conspiracy)",
+                details: "Buzz Aldrin was a 33rd degree Mason and carried a Masonic flag to the moon, performing a communion service. While this is documented, there's no evidence it was part of a larger Masonic conspiracy to fake the landing.",
+                proponent: "Christian fundamentalists",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-066",
+                category: "Political",
+                severity: "High",
+                claim: "NASA faked landing to beat Soviets after Kennedy's deadline promise",
+                evidence: "1961 Kennedy speech, Cold War pressure",
+                counter: "Risk of exposure too high; Soviets would have exposed hoax if detected",
+                status: "Motivation Theory",
+                details: "The theory that political pressure to fulfill Kennedy's 'before decade is out' promise led to faking the landing. While the Cold War motivation existed, the risk of exposure and Soviet monitoring makes this unlikely.",
+                proponent: "Historians",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-067",
+                category: "Political",
+                severity: "Medium",
+                claim: "Hollywood special effects teams consulted on lunar footage",
+                evidence: "2001: Space Odyssey released 1968, similar visuals",
+                counter: "Kubrick's film used front projection; moon footage shows different physics",
+                status: "Circumstantial",
+                details: "The similarity between '2001' (1968) and Apollo footage suggests Hollywood involvement. However, 2001 used front projection screens visible in photos, while Apollo footage shows the distinct physics of 1/6 gravity impossible to simulate perfectly in 1969.",
+                proponent: "Film theorists",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-068",
+                category: "Political",
+                severity: "High",
+                claim: "Buzz Aldrin punched Bart Sibrel when asked to swear on Bible about landing",
+                evidence: "2002 hotel lobby video",
+                counter: "Aldrin was harassed; punching doesn't prove guilt",
+                status: "Confirmed Real (irrelevant)",
+                details: "In 2002, Bart Sibrel confronted Buzz Aldrin demanding he swear on a Bible he walked on the moon. Aldrin punched Sibrel. While often cited as 'guilt,' Aldrin was 72 and being harassed in a hotel lobby after repeated stalking.",
+                proponent: "Bart Sibrel",
+                year: "2002"
+            },
+            {
+                id: "LUNA-069",
+                category: "Political",
+                severity: "Medium",
+                claim: "NASA budget was cut immediately after Apollo 11 succeeded (mission accomplished)",
+                evidence: "Budget dropped from $5.9B (1966) to $2.4B (1970)",
+                counter: "Vietnam War costs, shifting priorities; Apollos 12-17 still flew",
+                status: "True but misinterpreted",
+                details: "NASA's budget was cut 60% after 1966. Skeptics claim this proves the goal was just to beat the Soviets once. In reality, the space race goal was achieved and political priorities shifted to Vietnam and social programs.",
+                proponent: "Budget analysts",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-070",
+                category: "Political",
+                severity: "High",
+                claim: "Neil Armstrong rarely gave interviews because he was a poor liar",
+                evidence: "Armstrong's reclusive behavior post-Apollo",
+                counter: "Armstrong was introverted, private; gave many technical interviews",
+                status: "Personality misinterpretation",
+                details: "Armstrong avoided public appearances and interviews. Conspiracy theorists claim this was guilt. Biographers and family state he was naturally introverted, uncomfortable with fame, and actually gave hundreds of technical interviews.",
+                proponent: "Behavioral analysts",
+                year: "1980s"
+            },
+            {
+                id: "LUNA-071",
+                category: "Political",
+                severity: "High",
+                claim: "Apollo 1 fire (1967) was actually murder to silence Gus Grissom",
+                evidence: "Grissom hung lemon on Apollo simulator; critical of program",
+                counter: "Investigation confirmed electrical short in pure oxygen environment",
+                status: "Debunked",
+                details: "Gus Grissom was critical of Apollo safety and hung a lemon on the simulator. The fire that killed him, White, and Chaffee was investigated extensively and determined to be an electrical short in the 100% oxygen environment.",
+                proponent: "Various",
+                year: "1967"
+            },
+            {
+                id: "LUNA-072",
+                category: "Political",
+                severity: "High",
+                claim: "NASA is controlled by Nazis through Operation Paperclip continuation",
+                evidence: "German scientists in key positions through 1970s",
+                counter: "Scientists were monitored; most left NASA by 1970; rocket science is not conspiracy",
+                status: "Overstated",
+                details: "The presence of German scientists (von Braun, etc.) is used to suggest ongoing Nazi influence. While Operation Paperclip brought German scientists, they were monitored and most left NASA by the mid-1970s. Their expertise was in rockets, not media production.",
+                proponent: "Alternative history",
+                year: "1980s"
+            },
+            {
+                id: "LUNA-073",
+                category: "Political",
+                severity: "Medium",
+                claim: "British interviewers caught Armstrong in lie about seeing stars",
+                evidence: "BBC interview 1970",
+                counter: "Armstrong said he didn't recall seeing stars (not that they weren't there)",
+                status: "Misquoted",
+                details: "In a BBC interview, Armstrong was asked if he saw stars. He replied 'I didn't see any.' This is cited as proof he wasn't on the moon (where stars should be visible). Armstrong meant he was focused on the surface and didn't look for stars.",
+                proponent: "Interview analysts",
+                year: "1970"
+            },
+            {
+                id: "LUNA-074",
+                category: "Political",
+                severity: "High",
+                claim: "NASA admits they cannot go past low Earth orbit today (Orion 2014 statement)",
+                evidence: "Orion program manager statements",
+                counter: "Referring to current infrastructure, not physics; Orion flew beyond LEO in 2014",
+                status: "Misquoted",
+                details: "NASA officials stated they need to solve radiation protection before sending humans past LEO. This is cited as admission they never went. In reality, Apollo was short duration (days); Mars missions require months of protection.",
+                proponent: "Modern skeptics",
+                year: "2014"
+            },
+            {
+                id: "LUNA-075",
+                category: "Political",
+                severity: "Medium",
+                claim: "Masonic ritual performed on moon July 20 (significant date)",
+                evidence: "Aldrin's Masonic apron, July 20 date",
+                counter: "Launch window determined by orbital mechanics, not occult calendar",
+                status: "Coincidence",
+                details: "July 20, 1969 was claimed to be a significant Masonic/occult date. The launch date was determined by orbital mechanics, landing site lighting, and weather, not esoteric calendars.",
+                proponent: "Occult researchers",
+                year: "1970s"
+            },
+
+            // WITNESS TESTIMONY & ASTRONAUTS (76-100)
+            {
+                id: "LUNA-076",
+                category: "Witness",
+                severity: "High",
+                claim: "Neil Armstrong admitted to never leaving Earth's orbit during 1994 White House speech",
+                evidence: "Alleged transcript",
+                counter: "Fabricated quote; Armstrong never made such statement",
+                status: "Fabricated",
+                details: "A viral claim states Armstrong said 'we were only able to orbit at 400 miles.' This is a fabricated quote. Armstrong maintained the reality of the landings until his death.",
+                proponent: "Internet hoax",
+                year: "1994"
+            },
+            {
+                id: "LUNA-077",
+                category: "Witness",
+                severity: "High",
+                claim: "Multiple astronauts died mysteriously before/after Apollo 1 fire (15 deaths)",
+                evidence: "Apollo 1 crew, Ted Freeman, Elliot See, Charlie Bassett, Ed Givens, C.C. Williams",
+                counter: "High-risk profession; statistical probability in test pilot community",
+                status: "Coincidence",
+                details: "Between 1964-1967, 11 astronauts died in accidents. The 'Dead Astronauts' theory suggests they were silenced. However, test piloting has a 1% annual fatality rate. 15 deaths in 3 years among 30 astronauts is statistically expected.",
+                proponent: "Conspiracy forums",
+                year: "1967"
+            },
+            {
+                id: "LUNA-078",
+                category: "Witness",
+                severity: "Medium",
+                claim: "Edgar Mitchell claimed UFOs prevented nuclear war (credibility questioned)",
+                evidence: "Mitchell's interviews 1996-2016",
+                counter: "Personal beliefs don't invalidate technical expertise; Mitchell maintained moon landing was real",
+                status: "Irrelevant",
+                details: "Apollo 14 astronaut Edgar Mitchell became a vocal UFO/consciousness researcher. Skeptics use this to question his credibility. However, Mitchell never denied the moon landing and his post-NASA beliefs were separate from his Apollo experiences.",
+                proponent: "Credibility attackers",
+                year: "1996"
+            },
+            {
+                id: "LUNA-079",
+                category: "Witness",
+                severity: "Medium",
+                claim: "Ken Johnston fired by NASA for revealing fake photo evidence",
+                evidence: "Johnston's whistleblower claims 1990s",
+                counter: "Johnston was a contractor, not NASA employee; no evidence of tampering provided",
+                status: "Unverified",
+                details: "Ken Johnston claimed to be a NASA consultant who saw photos being tampered with. Investigation showed he was a contractor with limited access, and he never produced the alleged tampered photos.",
+                proponent: "Whistleblower community",
+                year: "1995"
+            },
+            {
+                id: "LUNA-080",
+                category: "Witness",
+                severity: "High",
+                claim: "Gene Cernan (last man on moon) said 'we didn't go there' in 2015 interview",
+                evidence: "Edited clip from 2015 interview",
+                counter: "Full context shows he meant we haven't been back; Cernan affirmed landings until death",
+                status: "Deceptively edited",
+                details: "A viral clip shows Cernan saying 'we didn't go there.' Full context reveals he was discussing the lack of return missions since 1972, not denying Apollo. Cernan consistently affirmed the landings until his death.",
+                proponent: "YouTube editors",
+                year: "2015"
+            },
+            {
+                id: "LUNA-081",
+                category: "Witness",
+                severity: "High",
+                claim: "Armstrong's strange behavior during Apollo 11 press conference (guilty body language)",
+                evidence: "Post-mission press conference analysis",
+                counter: "Exhaustion after 3 weeks quarantine; introverted personality",
+                status: "Misinterpreted",
+                details: "The Apollo 11 crew appeared uncomfortable and evasive at their first press conference. Body language experts claim this shows deception. The crew had just spent 3 weeks in quarantine and were exhausted, uncomfortable with media attention.",
+                proponent: "Body language experts",
+                year: "1969"
+            },
+            {
+                id: "LUNA-082",
+                category: "Witness",
+                severity: "Medium",
+                claim: "Australian technicians say they saw fake broadcast from different location",
+                evidence: "Honeysuckle Creek tracking station rumors",
+                counter: "No credible technician has come forward; conspiracy of silence impossible",
+                status: "Hearsay",
+                details: "Rumors claim Australian tracking station technicians saw a different broadcast than what was shown publicly. No named technician has ever verified this claim, and the station's role was widely documented.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-083",
+                category: "Witness",
+                severity: "Medium",
+                claim: "Ralph Rene (self-taught physicist) published 'NASA Mooned America' with calculations",
+                evidence: "Rene's book 1994",
+                counter: "Rene had no physics degree; calculations contain mathematical errors",
+                status: "Debunked",
+                details: "Ralph Rene published a book claiming mathematical proof of fakery. Rene had no formal physics education, and his calculations regarding radiation, fuel capacity, and heat transfer were shown to contain significant errors.",
+                proponent: "Ralph Rene",
+                year: "1994"
+            },
+            {
+                id: "LUNA-084",
+                category: "Witness",
+                severity: "High",
+                claim: "Bill Kaysing (NASA contractor) blew whistle in 1976 book 'We Never Went to the Moon'",
+                evidence: "Kaysing's book and interviews",
+                counter: "Kaysing was librarian, not engineer; worked at Rocketdyne 1956-63, not on Apollo",
+                status: "Misrepresented credentials",
+                details: "Bill Kaysing is considered the father of moon hoax theories. He claimed to be a 'senior engineer' at NASA. Records show he was a technical writer/librarian at Rocketdyne (not NASA) and left before Apollo program began.",
+                proponent: "Bill Kaysing",
+                year: "1976"
+            },
+            {
+                id: "LUNA-085",
+                category: "Witness",
+                severity: "High",
+                claim: "Sibrel's 'A Funny Thing Happened on the Way to the Moon' contains astronaut confessions",
+                evidence: "Bart Sibrel's 2001 film",
+                counter: "Film contains edited footage and misinterpretations; no actual confessions",
+                status: "Deceptive editing",
+                details: "Bart Sibrel's film claims to show astronauts 'confessing' to faking footage. The film uses edited clips, out-of-context quotes, and footage of astronauts preparing for broadcast (not faking missions).",
+                proponent: "Bart Sibrel",
+                year: "2001"
+            },
+            {
+                id: "LUNA-086",
+                category: "Witness",
+                severity: "Low",
+                claim: "Astronauts received excessive gifts/money to maintain silence",
+                evidence: "Life insurance postal covers",
+                counter: "Covers were authorized and legal; astronauts were not wealthy post-Apollo",
+                status: "Debunked",
+                details: "Astronauts signed postal covers (stamps) before missions to sell if they died, providing life insurance for families. This was legal and approved. Most astronauts lived middle-class lives post-Apollo.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-087",
+                category: "Witness",
+                severity: "Medium",
+                claim: "Thomas Baron (NASA inspector) died in 'accident' after writing critical report",
+                evidence: "Baron died in train crash 1967",
+                counter: "Baron was contractor, not NASA; crash investigated as accident; family not suspicious",
+                status: "Coincidence",
+                details: "Thomas Baron wrote a critical report on Apollo safety and died in a train collision with his family weeks later. While suspicious, investigations concluded accident, and Baron was a quality control inspector (not whistleblower status).",
+                proponent: "Conspiracy theorists",
+                year: "1967"
+            },
+            {
+                id: "LUNA-088",
+                category: "Witness",
+                severity: "Medium",
+                claim: "Gus Grissom's son claims father was murdered",
+                evidence: "Scott Grissom statements 1990s",
+                counter: "Family grief and denial; no evidence of sabotage found in investigations",
+                status: "Family opinion",
+                details: "Scott Grissom (son of Gus) has maintained his father was murdered. This is based on family intuition and Gus's criticism of NASA, but multiple investigations confirmed electrical short, not sabotage.",
+                proponent: "Scott Grissom",
+                year: "1997"
+            },
+            {
+                id: "LUNA-089",
+                category: "Witness",
+                severity: "High",
+                claim: "All astronauts became reclusive or deeply religious after 'returning'",
+                evidence: "Religious conversions, alcoholism reports",
+                counter: "Most maintained active public lives; Aldrin struggled with depression (common for test pilots)",
+                status: "Overstated",
+                details: "Several astronauts had religious experiences (Apollo 8 Genesis reading, Aldrin communion). Some struggled with alcoholism (Aldrin). However, this is common in high-stress professions and doesn't indicate trauma from fakery.",
+                proponent: "Psychological analysts",
+                year: "1980s"
+            },
+            {
+                id: "LUNA-090",
+                category: "Witness",
+                severity: "Medium",
+                claim: "Unnamed NASA employee 'confessed' on deathbed (recurring urban legend)",
+                evidence: "Second-hand reports",
+                counter: "No named source; no documentation; changes details in retelling",
+                status: "Urban Legend",
+                details: "A recurring claim of an unnamed NASA engineer confessing on deathbed appears in various forms since the 1970s. No credible named source has ever verified this, and details change with each retelling.",
+                proponent: "Internet forums",
+                year: "1970s"
+            },
+
+            // ENVIRONMENTAL & SPATIAL (91-115)
+            {
+                id: "LUNA-091",
+                category: "Environmental",
+                severity: "Medium",
+                claim: "Lunar sky should be blacker with more contrast if no atmosphere",
+                evidence: "Sky brightness in photos",
+                counter: "Camera exposure settings, scattered light from surface",
+                status: "Debunked",
+                details: "The lunar sky appears lighter than expected in some photos. This is due to camera exposure settings optimized for the bright surface, which overexposes the black sky slightly, and light scattered from the bright regolith.",
+                proponent: "Photography skeptics",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-092",
+                category: "Environmental",
+                severity: "High",
+                claim: "Earth should appear much larger from moon (4x moon size from Earth)",
+                evidence: "Earthrise photos show small Earth",
+                counter: "Lens focal length affects apparent size; Earth is 4x larger but camera lenses vary",
+                status: "Debunked",
+                details: "Earth appears relatively small in lunar photos. While Earth is 4x the diameter of the moon, apparent size depends on lens focal length. Wide-angle lenses make Earth appear smaller; telephoto lenses make it appear larger.",
+                proponent: "Astronomy enthusiasts",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-093",
+                category: "Environmental",
+                severity: "Medium",
+                claim: "Craters appear too small/shallow for meteor impacts over billions of years",
+                evidence: "Crater depth analysis",
+                counter: "Regolith compaction, ejecta patterns consistent with impacts",
+                status: "Misunderstood",
+                details: "Lunar craters appear shallower than expected. This is due to regolith (soil) filling craters over time and the ejecta blanket surrounding craters making them appear shallower than they are.",
+                proponent: "Geology skeptics",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-094",
+                category: "Environmental",
+                severity: "High",
+                claim: "Moon should have magnetic field if it was once part of Earth (it doesn't)",
+                evidence: "Lunar magnetometer readings",
+                counter: "Moon cooled too quickly to maintain dynamo; some localized magnetism exists",
+                status: "Scientific Anomaly",
+                details: "The moon lacks a global magnetic field, suggesting it cooled faster than expected if formed from Earth impact. However, some lunar rocks retain magnetism, suggesting brief ancient field. This is an active research area, not proof of fakery.",
+                proponent: "Physics skeptics",
+                year: "1980s"
+            },
+            {
+                id: "LUNA-095",
+                category: "Environmental",
+                severity: "Medium",
+                claim: "Lunar dust layer too thin for 4.5 billion years of accumulation",
+                evidence: "Regolith depth 2-8 meters",
+                counter: "Micrometeorite gardening compacts surface; constant churning prevents deep buildup",
+                status: "Debunked",
+                details: "The regolith is only 2-8 meters deep after 4.5 billion years. This is because micrometeorite impacts constantly churn and compact the surface ('gardening'), preventing unlimited buildup.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-096",
+                category: "Environmental",
+                severity: "High",
+                claim: "Lunar surface should be radioactive from constant cosmic exposure",
+                evidence: "Cosmic ray exposure calculations",
+                counter: "Regolith shields lower layers; samples show expected exposure levels",
+                status: "Debunked",
+                details: "The surface should be highly radioactive from 4.5 billion years of cosmic rays. While the surface is slightly radioactive, the upper regolith layer shields lower material. Returned samples show radiation levels consistent with exposure.",
+                proponent: "Radiation skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-097",
+                category: "Environmental",
+                severity: "Low",
+                claim: "Lunar horizon appears too close/curved in photos",
+                evidence: "Horizon distance calculations",
+                counter: "Lens distortion, small hills create false horizon",
+                status: "Debunked",
+                details: "The lunar horizon appears closer than expected (moon is smaller than Earth). Wide-angle lenses create curvature distortion, and small hills in foreground obscure true horizon. Calculations confirm expected distances.",
+                proponent: "Geometry enthusiasts",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-098",
+                category: "Environmental",
+                severity: "Medium",
+                claim: "Temperature variation too extreme for equipment to survive (120°C to -173°C)",
+                evidence: "Thermal cycling specifications",
+                counter: "EVAs timed for moderate temps; insulation and thermal coating on equipment",
+                status: "Debunked",
+                details: "The extreme temperature range (293°C differential) should damage equipment. However, EVAs were scheduled during moderate lunar morning temperatures, and equipment had reflective coatings and insulation.",
+                proponent: "Engineering skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-099",
+                category: "Environmental",
+                severity: "High",
+                claim: "Cosmic rays should have fogged all film completely",
+                evidence: "Film fogging calculations",
+                counter: "Film shielded in metal magazines; short exposure times; some fogging did occur",
+                status: "Partially True",
+                details: "Cosmic rays should have fogged film heavily. While some fogging occurred (visible as streaks on some negatives), the film was shielded in thick metal Hasselblad magazines and exposures were short.",
+                proponent: "Photography experts",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-100",
+                category: "Environmental",
+                severity: "Medium",
+                claim: "Lunar sunrise/sunset should occur faster due to no atmosphere (18 hour day)",
+                evidence: "Transition timing in footage",
+                counter: "Sunrise/set takes hours due to 28-day rotation; consistent with footage",
+                status: "Debunked",
+                details: "The moon rotates once per 28 days, meaning sunrise takes hours, not minutes. Some footage shows gradual lighting changes that match the expected slow transition due to lunar rotation speed.",
+                proponent: "Astronomy skeptics",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-101",
+                category: "Environmental",
+                severity: "Medium",
+                claim: "Moon rocks show evidence of water erosion (impossible without atmosphere)",
+                evidence: "Rock surface analysis",
+                counter: "Thermal fracturing creates similar patterns; recent discovery of lunar water",
+                status: "Updated Science",
+                details: "Some rocks show rounded edges suggesting water erosion. While initially mysterious, this is now attributed to thermal fracturing and micrometeorite erosion. Recent missions confirmed water ice on moon.",
+                proponent: "Geology skeptics",
+                year: "1980s"
+            },
+            {
+                id: "LUNA-102",
+                category: "Environmental",
+                severity: "High",
+                claim: "Solar wind should have eroded all surface features over billions of years",
+                evidence: "Solar wind flux calculations",
+                counter: "Regolith formation from solar wind implantation; erosion is slow process",
+                status: "Debunked",
+                details: "Solar wind (charged particles) should erode surface features. While solar wind does interact with regolith (creating volatiles), the erosion rate is extremely slow compared to geological timescales.",
+                proponent: "Physics skeptics",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-103",
+                category: "Environmental",
+                severity: "Low",
+                claim: "Lunar modules should have sunk into dust (pre-landing fear, not conspiracy)",
+                evidence: "1960s deep regolith fears",
+                counter: "Surveyor missions confirmed surface bearing strength 1966-1968",
+                status: "Historical Context",
+                details: "Before landing, scientists feared deep dust (Thomas Gold theory). Surveyor missions (1966-68) confirmed surface could support spacecraft. This is often cited as a 'conspiracy' but was legitimate scientific concern resolved before Apollo.",
+                proponent: "Historical revisionists",
+                year: "1960s"
+            },
+            {
+                id: "LUNA-104",
+                category: "Environmental",
+                severity: "Medium",
+                claim: "Earthshine should provide more illumination on dark side of equipment",
+                evidence: "Shadow brightness measurements",
+                counter: "Earth reflects 37% of light (albedo 0.37); provides dim illumination",
+                status: "Debunked",
+                details: "Earth is bright in lunar sky and should provide significant illumination in shadows. Earthshine does provide some light (full Earth is 40x brighter than full moon), but not enough to eliminate shadows or match direct sunlight.",
+                proponent: "Lighting analysts",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-105",
+                category: "Environmental",
+                severity: "High",
+                claim: "Apollo 13 'failure' was staged to regain public interest",
+                evidence: "Timing of accident, 'successful failure' narrative",
+                counter: "Oxygen tank manufacturing error documented; near-disaster cost NASA politically",
+                status: "Speculative",
+                details: "Apollo 13's explosion occurred when public interest was waning. Some claim it was staged for drama. The accident was caused by a documented manufacturing error in the oxygen tank, and nearly destroyed NASA's reputation.",
+                proponent: "Drama theorists",
+                year: "1970"
+            },
+
+            // HISTORICAL & DOCUMENTATION (106-130)
+            {
+                id: "LUNA-106",
+                category: "Historical",
+                severity: "High",
+                claim: "NASA claims original high-quality video was accidentally recorded over",
+                evidence: "NASA statement 2006",
+                counter: "Standard practice in era of expensive tape; copies exist",
+                status: "Confirmed",
+                details: "NASA admitted in 2006 that the original slow-scan telemetry tapes were likely erased and reused in the 1980s due to a shortage of high-quality tape. This is cited as suspicious, but was standard archival practice before digital storage.",
+                proponent: "Conspiracy theorists",
+                year: "2006"
+            },
+            {
+                id: "LUNA-107",
+                category: "Historical",
+                severity: "High",
+                claim: "Blueprints for Saturn V and LEM destroyed or classified",
+                evidence: "No complete Saturn V blueprints exist",
+                counter: "Manufacturing jigs and tooling destroyed; plans exist but scattered",
+                status: "Partially True",
+                details: "Complete blueprints for Saturn V don't exist in one location. Manufacturing tooling was destroyed to save costs after production ended. However, technical schematics exist in archives, just not 'buildable' blueprints.",
+                proponent: "Documentation seekers",
+                year: "1980s"
+            },
+            {
+                id: "LUNA-108",
+                category: "Historical",
+                severity: "Medium",
+                claim: "Apollo 11 telemetry data 'lost' from NSSDC archives",
+                evidence: "Missing data tapes",
+                counter: "Data exists in other formats; not the original raw telemetry",
+                status: "Partially True",
+                details: "Original Apollo 11 telemetry tapes are missing from National Space Science Data Center. However, processed data exists in printouts and other media. The original raw tapes are the only missing items.",
+                proponent: "Data archivists",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-109",
+                category: "Historical",
+                severity: "High",
+                claim: "No independent verification of landing sites until 2009 (LRO)",
+                evidence: "40-year gap in verification",
+                counter: "Soviet tracking, lunar laser ranging, independent radio hams confirmed signals",
+                status: "Misleading",
+                details: "Direct imaging of landing sites didn't occur until LRO (2009). However, independent verification existed: Soviet tracking of spacecraft, amateur radio reception of signals, and laser retroreflector data.",
+                proponent: "Verification skeptics",
+                year: "2009"
+            },
+            {
+                id: "LUNA-110",
+                category: "Historical",
+                severity: "Medium",
+                claim: "Original Apollo 11 moon rocks 'lost' by NASA",
+                evidence: "Inventory discrepancies",
+                counter: "Most accounted for; some given to states/countries untracked",
+                status: "Partially True",
+                details: "Some lunar samples given to states and countries in the 1970s have gone missing from those recipients' inventories. NASA's core collection is accounted for, but distributed samples have poor chain of custody.",
+                proponent: "Inventory trackers",
+                year: "2010s"
+            },
+            {
+                id: "LUNA-111",
+                category: "Historical",
+                severity: "High",
+                claim: "Apollo Guidance Computer source code recently released proves primitive capability",
+                evidence: "AGC code posted to GitHub 2016",
+                counter: "Code shows sophisticated real-time OS; proves capability not disproves",
+                status: "Misinterpreted",
+                details: "The AGC source code was digitized and released in 2016. Analysis shows sophisticated interrupt handling and real-time processing. Skeptics claim this proves it was inadequate, but experts confirm it was sufficient for the specific tasks.",
+                proponent: "Software analysts",
+                year: "2016"
+            },
+            {
+                id: "LUNA-112",
+                category: "Historical",
+                severity: "Medium",
+                claim: "Missing episodes of Apollo 11 slow-scan TV (SSTV) never recovered",
+                evidence: "Gaps in recording record",
+                counter: "Converted to NTSC in real-time; SSTV tapes reused",
+                status: "Confirmed Lost",
+                details: "Original SSTV tapes for portions of Apollo 11 EVA are missing. They were converted to broadcast format in real-time and the original slow-scan tapes were likely erased and reused.",
+                proponent: "Video archivists",
+                year: "2009"
+            },
+            {
+                id: "LUNA-113",
+                category: "Historical",
+                severity: "High",
+                claim: "NASA admitted they can't find the original Apollo 11 flight plans",
+                evidence: "NASA FOIA requests",
+                counter: "Flight plans exist in multiple copies; some originals in private collections",
+                status: "Misleading",
+                details: "Some original flight plan documents are missing from NASA archives. However, multiple copies were printed, and many exist in astronaut personal collections and museums.",
+                proponent: "FOIA requesters",
+                year: "2010s"
+            },
+            {
+                id: "LUNA-114",
+                category: "Historical",
+                severity: "Medium",
+                claim: "Production of '2001: A Space Odyssey' (1968) proves technology existed to fake footage",
+                evidence: "Visual effects quality in 2001 film",
+                counter: "2001 used techniques detectable in analysis; moon footage shows 1/6 gravity physics",
+                status: "Irrelevant",
+                details: "The quality of Kubrick's 2001 (1968) is cited as proof that convincing fake footage could be produced. However, 2001's effects used front projection (visible in photos) and slow-motion, while Apollo footage shows the specific physics of 1/6 gravity.",
+                proponent: "Film theorists",
+                year: "1968"
+            },
+            {
+                id: "LUNA-115",
+                category: "Historical",
+                severity: "High",
+                claim: "NASA commissioned 'Brookings Report' to prepare public for alien artifacts (cover-up prep)",
+                evidence: "Brookings Institution Report 1960",
+                counter: "Report discussed possible implications, not preparation for faking missions",
+                status: "Misinterpreted",
+                details: "The 1960 Brookings Report discussed how discovery of alien artifacts might affect society. Conspiracy theorists claim this was preparation for faking Apollo. It was actually policy research, not operational planning.",
+                proponent: "Ancient astronaut theorists",
+                year: "1960"
+            },
+            {
+                id: "LUNA-116",
+                category: "Historical",
+                severity: "Medium",
+                claim: "Apollo 11 astronauts in quarantine for 21 days proves they brought back nothing",
+                evidence: "Quarantine procedures",
+                counter: "Precaution against unknown pathogens; returned 47 lbs of samples",
+                status: "Debunked",
+                details: "The 21-day quarantine is cited as proof they returned empty-handed. In reality, the quarantine was precaution against potential lunar pathogens (later proven unnecessary). The crew returned with 47 pounds of samples.",
+                proponent: "Various",
+                year: "1969"
+            },
+            {
+                id: "LUNA-117",
+                category: "Historical",
+                severity: "Low",
+                claim: "Flags placed on moon are all white now (bleached by radiation)",
+                evidence: "LRO photos 2012",
+                counter: "LRO resolution insufficient to determine flag color; likely bleached",
+                status: "Plausible but unverified",
+                details: "Lunar Reconnaissance Orbiter photos show shadows at flag sites suggesting flags still stand, but resolution is insufficient to determine color. Nylon flags likely bleached white by UV radiation over 50 years.",
+                proponent: "Modern observers",
+                year: "2012"
+            },
+            {
+                id: "LUNA-118",
+                category: "Historical",
+                severity: "High",
+                claim: "Artemis program (2024) admits they must 'solve' radiation and shielding (implying Apollo didn't)",
+                evidence: "Artemis program statements 2019-2024",
+                counter: "Apollo was short duration (days); Artemis aims for long-term presence (weeks/months)",
+                status: "Misquoted",
+                details: "Artemis officials state they need better radiation shielding for long-duration missions. This is cited as proof Apollo was faked (no shielding needed for short trips). Artemis aims for weeks-long stays, requiring different standards.",
+                proponent: "Modern skeptics",
+                year: "2024"
+            },
+            {
+                id: "LUNA-119",
+                category: "Historical",
+                severity: "Medium",
+                claim: "Chinese rover (2013) found no evidence of Apollo landing sites",
+                evidence: "Chang'e 3 data",
+                counter: "Chang'e 3 landed far from Apollo sites; Chinese confirm Apollo landings",
+                status: "Fabricated",
+                details: "Claims that Chinese missions found no Apollo evidence are false. Chinese space officials have publicly confirmed the Apollo landings occurred. Chang'e 3 landed far from any Apollo site.",
+                proponent: "Social media",
+                year: "2013"
+            },
+            {
+                id: "LUNA-120",
+                category: "Historical",
+                severity: "High",
+                claim: "NASA 'accidentally' taped over Apollo 11 original footage",
+                evidence: "2006 press conference",
+                counter: "Slow-scan conversion tapes, not original moon footage; standard practice",
+                status: "Confirmed (not suspicious)",
+                details: "NASA admitted in 2006 that the original slow-scan TV conversion tapes were likely recorded over. These were not the 'original moon footage' but the conversion masters for broadcast. This was standard practice in the era of expensive tape.",
+                proponent: "Media critics",
+                year: "2006"
+            },
+
+            // ADDITIONAL TECHNICAL (121-147)
+            {
+                id: "LUNA-121",
+                category: "Technical",
+                severity: "High",
+                claim: "LEM testing was disastrous; Armstrong ejected seconds before crash",
+                evidence: "LLTV crashes, training vehicle failures",
+                counter: "LLTV was training vehicle, not actual LEM; Armstrong's ejection proved safety systems",
+                status: "Misrepresented",
+                details: "The Lunar Landing Training Vehicle (LLTV) was unstable and crashed. Armstrong ejected in 1968. Conspiracy theorists claim this proves LEM was unsafe. In reality, the LLTV simulated 1/6 gravity on Earth and was notoriously difficult, but the actual LEM worked perfectly.",
+                proponent: "Bill Kaysing",
+                year: "1976"
+            },
+            {
+                id: "LUNA-122",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Space suits would have inflated like balloons in vacuum, preventing movement",
+                evidence: "Vacuum chamber tests",
+                counter: "Suits were pressure at 3.7 psi (not full Earth pressure); joints designed to move",
+                status: "Debunked",
+                details: "The suits operated at 3.7 psi pure oxygen, not 14.7 psi Earth atmosphere. This reduced the pressure differential in vacuum (external 0 psi). The joints were designed with convoluted sections allowing movement despite pressure.",
+                proponent: "Engineering skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-123",
+                category: "Technical",
+                severity: "High",
+                claim: "Film magazine change impossible in pressurized gloves",
+                evidence: "Hasselblad magazine design",
+                counter: "Magazines designed with large levers for gloved operation; practiced extensively",
+                status: "Debunked",
+                details: "Changing 70mm film magazines required precise manipulation. The magazines were designed with large levers and guides specifically for pressurized glove operation. Astronauts practiced this for hundreds of hours.",
+                proponent: "Photography skeptics",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-124",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Rover batteries couldn't operate in -180°C lunar night",
+                evidence: "Silver-zinc battery specs",
+                counter: "Rovers operated during lunar day only; parked to survive night (some failed)",
+                status: "Debunked",
+                details: "The lunar rover used silver-zinc batteries that would fail in extreme cold. However, all EVAs occurred during the 14-day lunar day. The rovers were parked at the end of EVAs, and some systems did fail from cold.",
+                proponent: "Battery experts",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-125",
+                category: "Technical",
+                severity: "High",
+                claim: "Helmets would have fogged from breath in sealed suit",
+                evidence: "Humidity management",
+                counter: "Lithium hydroxide canisters absorbed CO2 and moisture; helmet anti-fog coating",
+                status: "Debunked",
+                details: "Breath moisture should have fogged helmets. The PLSS contained lithium hydroxide canisters that absorbed CO2 and moisture from the suit atmosphere. Helmets also had anti-fogging coatings.",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-126",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Urine collection system impossible to use while wearing suit",
+                evidence: "Urine collection and transfer assembly (UCTA)",
+                counter: "Condom-style attachment with valve; used before EVA and during",
+                status: "Debunked",
+                details: "The urine collection system used a condom-style attachment with a valve and bag. While awkward, it was functional. Fecal collection used adhesive-backed bags and was more problematic (not used during EVAs).",
+                proponent: "Various",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-127",
+                category: "Technical",
+                severity: "High",
+                claim: "Radio signals should have 2.6 second delay between transmission and response",
+                evidence: "240,000 mile distance at light speed",
+                counter: "Delay is present in original recordings; broadcast versions sometimes edited",
+                status: "Confirmed Present",
+                details: "Radio signals traveling at light speed should take 1.3 seconds each way. This delay is present in original mission audio. Some broadcast versions edited out pauses for television pacing, creating confusion.",
+                proponent: "Physics enthusiasts",
+                year: "1969"
+            },
+            {
+                id: "LUNA-128",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Lunar module hand-welded seams would have leaked in vacuum",
+                evidence: "LM construction photos",
+                counter: "Seams were welded and tested in vacuum chambers; pressure differential only 5 psi",
+                status: "Debunked",
+                details: "The LM was hand-welded and appeared crude. However, all welds were X-ray tested and the structure was tested in vacuum chambers. The pressure differential was only 5 psi (internal to vacuum), manageable with proper welding.",
+                proponent: "Manufacturing skeptics",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-129",
+                category: "Technical",
+                severity: "High",
+                claim: "Command module heat shield couldn't survive re-entry temperatures",
+                evidence: "AVCOAT material specs",
+                counter: "Heat shield ablated (burned away) as designed; AVCOAT thickness calculated precisely",
+                status: "Debunked",
+                details: "The heat shield had to survive 5,000°F re-entry temperatures. The AVCOAT material ablated (burned away slowly), carrying heat away from the structure. Thickness was calculated based on trajectory and heat load.",
+                proponent: "Thermal engineers",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-130",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Parachutes couldn't open in sequence precisely at 10,000 feet",
+                evidence: "Drogue and main chute deployment",
+                counter: "Barometric altimeters triggered drogues; radar altimeters triggered mains",
+                status: "Debunked",
+                details: "Precise parachute deployment at specific altitudes was managed by barometric altimeters (drogues at 24,000 ft) and radar altimeters (mains at 10,000 ft). The system was tested extensively.",
+                proponent: "Aviation skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-131",
+                category: "Technical",
+                severity: "High",
+                claim: "Spacecraft would have tumbled during TLI (Trans-Lunar Injection) burn",
+                evidence: "Center of thrust vs center of mass",
+                counter: "Gimballed engines maintained alignment; computer corrections every 0.1 seconds",
+                status: "Debunked",
+                details: "The S-IVB engine gimballed (pivoted) to maintain thrust through the center of mass. The IU (Instrument Unit) made corrections 10 times per second to prevent tumbling during the 6-minute burn.",
+                proponent: "Rocket skeptics",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-132",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Fuel slosh in tanks should have caused destabilization in zero-g",
+                evidence: "Cryogenic fuel behavior",
+                counter: "Baffles in tanks prevented slosh; ullage engines settled fuel before main burns",
+                status: "Debunked",
+                details: "Liquid fuel in zero gravity sloshes unpredictably. The S-IVB and SM tanks contained baffles to dampen slosh. Small ullage engines fired before main burns to settle fuel at the bottom of tanks.",
+                proponent: "Fluid dynamics skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-133",
+                category: "Technical",
+                severity: "High",
+                claim: "IMU (Inertial Measurement Unit) couldn't maintain accuracy over 3-day journey",
+                evidence: "Gyro drift calculations",
+                counter: "Star sightings realigned IMU every 24 hours; drift was compensated",
+                status: "Debunked",
+                details: "The IMU had gyro drift of 0.1 degrees per hour. Over 3 days, this would accumulate. However, astronauts took star sightings through the sextant to realign the IMU every 24 hours, correcting drift.",
+                proponent: "Navigation skeptics",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-134",
+                category: "Technical",
+                severity: "Medium",
+                claim: "S-band antenna couldn't maintain lock with Earth while rotating",
+                evidence: "High-gain antenna requirements",
+                counter: "Gimballed high-gain antenna; low-gain omnidirectional backup",
+                status: "Debunked",
+                details: "The high-gain dish antenna needed precise pointing. It was gimballed to track Earth independently of spacecraft rotation. Low-gain omnidirectional antennas provided backup communication.",
+                proponent: "Communications skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-135",
+                category: "Technical",
+                severity: "High",
+                claim: "Cryogenic fuel couldn't stay cold for 3-day mission (boil-off)",
+                evidence: "Hydrogen/oxygen evaporation rates",
+                counter: "Tank insulation and pressure management; boil-off within design margins",
+                status: "Debunked",
+                details: "Cryogenic fuels (H2, O2) slowly boil off even in insulated tanks. The SM tanks were designed with allowable boil-off rates, and pressure was managed by relieving valves. Fuel was sufficient for mission duration with margins.",
+                proponent: "Cryogenics skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-136",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Astronauts couldn't enter/exit LEM in bulky suits through small hatch",
+                evidence: "LEM hatch dimensions",
+                counter: "Hatch was 32 inches square; suits were flexible at waist; practiced extensively",
+                status: "Debunked",
+                details: "The LEM hatch was 32 inches by 32 inches. The suits, while bulky, flexed at the waist. Astronauts practiced ingress/egress hundreds of times in simulations. The procedure was difficult but possible.",
+                proponent: "Ergonomics skeptics",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-137",
+                category: "Technical",
+                severity: "High",
+                claim: "RCS thrusters couldn't precisely control LEM attitude in docking",
+                evidence: "Reaction Control System specs",
+                counter: "16 thrusters provided redundancy; computer pulsed them in milliseconds",
+                status: "Debunked",
+                details: "The LEM had 16 RCS thrusters (4 quads) for attitude control. While individual thrusters were imprecise, the computer pulsed them in millisecond bursts for fine control. Astronauts also used manual control.",
+                proponent: "Control systems skeptics",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-138",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Battery technology in 1969 insufficient for 10-day mission",
+                evidence: "Silver-zinc battery capacity",
+                counter: "Fuel cells provided main power (reactants: H2/O2); batteries for backup only",
+                status: "Debunked",
+                details: "Batteries alone would have been insufficient. The CSM used fuel cells (hydrogen-oxygen reaction) providing 1.4 kW continuous power for the entire mission. Batteries provided backup and peak load support.",
+                proponent: "Power systems skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-139",
+                category: "Technical",
+                severity: "High",
+                claim: "Water recycling system couldn't support 3 astronauts for 3 days",
+                evidence: "Water consumption requirements",
+                counter: "Carried water for mission; fuel cells produced water as byproduct",
+                status: "Debunked",
+                details: "Apollo carried 40 lbs of water and the fuel cells produced 2.5 lbs of pure water per hour as a byproduct of electricity generation. This provided ample water for drinking, food rehydration, and cooling.",
+                proponent: "Life support skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-140",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Oxygen recycling system couldn't scrub CO2 fast enough for 3 men",
+                evidence: "LiOH canister capacity",
+                counter: "LiOH canisters replaced every 12 hours; spare capacity built in",
+                status: "Debunked",
+                details: "Lithium Hydroxide (LiOH) canisters absorbed CO2. They were replaced every 12 hours with spares. The system was designed with 100% redundancy. Apollo 13's crisis occurred when they ran out of compatible canisters.",
+                proponent: "Environmental skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-141",
+                category: "Technical",
+                severity: "High",
+                claim: "Heat rejection in space impossible without convection (radiation only too slow)",
+                evidence: "Thermal control requirements",
+                counter: "Water evaporators and radiators; ammonia boiler systems dumped heat",
+                status: "Debunked",
+                details: "The spacecraft used a combination of water sublimators (exposed ice to vacuum) and radiators to dump heat. The service module had large radiator panels. Heat transfer in vacuum relies on radiation, which is sufficient with large surface areas.",
+                proponent: "Thermodynamics skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-142",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Launch escape system couldn't actually save crew in explosion",
+                evidence: "LES tower specs",
+                counter: "Tested successfully; designed for pad aborts and early ascent",
+                status: "Partially True",
+                details: "The Launch Escape System (LES) was designed for pad aborts and early ascent emergencies. It could not save the crew in all scenarios (like Apollo 1 pad fire, which occurred before LES was armed). It was tested successfully in unmanned tests.",
+                proponent: "Safety analysts",
+                year: "1967"
+            },
+            {
+                id: "LUNA-143",
+                category: "Technical",
+                severity: "High",
+                claim: "LM ascent stage hypergolic fuels would have exploded on contact with dust",
+                evidence: "Aerozine 50 and N2O4 contact with regolith",
+                counter: "Fuel systems sealed until ignition; no evidence of contamination",
+                status: "Speculative",
+                details: "The LM ascent used hypergolic fuels (ignite on contact). Critics claim dust contamination would cause explosions. The fuel lines were sealed and pressurized; no mechanism for dust contamination existed.",
+                proponent: "Chemistry skeptics",
+                year: "2000s"
+            },
+            {
+                id: "LUNA-144",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Ablative heat shield couldn't be attached to module with simple bolts",
+                evidence: "AVCOAT block attachment",
+                counter: "Fiberglass honeycomb filled with ablative material, bolted to structure",
+                status: "Debunked",
+                details: "The heat shield consisted of a fiberglass honeycomb structure filled with AVCOAT ablative material, bolted to the CM structure. This design was tested extensively in arc-jet facilities and actual re-entries.",
+                proponent: "Materials skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-145",
+                category: "Technical",
+                severity: "High",
+                claim: "Docking mechanism between CSM and LM couldn't seal perfectly in vacuum",
+                evidence: "Probe and drogue mechanism",
+                counter: "Gaskets compressed under pressure; tested in vacuum chambers",
+                status: "Debunked",
+                details: "The probe-and-drogue docking mechanism used silicone gaskets that compressed when pressurized. The system was tested extensively in vacuum chambers and worked reliably on all missions.",
+                proponent: "Mechanical skeptics",
+                year: "1990s"
+            },
+            {
+                id: "LUNA-146",
+                category: "Technical",
+                severity: "Medium",
+                claim: "Lunar soil samples sealed in vacuum would have outgassed and burst containers",
+                evidence: "Sample container design",
+                counter: "Containers designed to hold vacuum; samples kept in environmental storage",
+                status: "Debunked",
+                details: "Sample return containers were designed to maintain lunar vacuum. Some samples were intentionally exposed to Earth atmosphere; others were kept in vacuum chambers or nitrogen purge environments.",
+                proponent: "Sample handling skeptics",
+                year: "1970s"
+            },
+            {
+                id: "LUNA-147",
+                category: "Technical",
+                severity: "High",
+                claim: "Astronauts' heart rates too low during supposed 'crisis' moments (simulated stress)",
+                evidence: "Biometric data from EVAs",
+                counter: "Professional test pilots trained for stress; heart rates elevated appropriately",
+                status: "Misinterpreted",
+                details: "Heart rate data shows relatively calm rates (60-100 bpm) during EVAs. This is cited as evidence of simulation. However, professional test pilots maintain low heart rates under stress. Rates did elevate during actual emergencies.",
+                proponent: "Medical skeptics",
+                year: "2000s"
+            }
+        ];
+
+        let currentPage = 1;
+        const itemsPerPage = 20;
+        let filteredTheories = [...theories];
+        let showDebunked = true;
+        let sortColumn = -1;
+        let sortDirection = 1;
+
+        function init() {
+            renderTable();
+            updateStats();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageItems = filteredTheories.slice(start, end);
+
+            pageItems.forEach(theory => {
+                const row = document.createElement('tr');
+                if (theory.status === 'Debunked' && !showDebunked) {
+                    row.className = 'debunked';
+                    row.style.display = 'none';
+                }
+                row.onclick = () => toggleExpand(theory.id);
+                
+                row.innerHTML = `
+                    <td class="theory-id">${theory.id}</td>
+                    <td><span class="category cat-${theory.category.toLowerCase()}">${theory.category}</span></td>
+                    <td><span class="severity sev-${theory.severity.toLowerCase()}"></span>${theory.severity}</td>
+                    <td class="claim-text">${theory.claim}</td>
+                    <td>${theory.evidence}</td>
+                    <td>${theory.counter}</td>
+                    <td>${theory.status}</td>
+                `;
+                
+                tbody.appendChild(row);
+                
+                const detailRow = document.createElement('tr');
+                detailRow.id = `detail-${theory.id}`;
+                detailRow.className = 'expanded-row';
+                detailRow.innerHTML = `
+                    <td colspan="7">
+                        <div class="expanded-content">
+                            <div class="detail-section">
+                                <span class="detail-label">Detailed Analysis</span>
+                                <div class="detail-text">${theory.details}</div>
+                            </div>
+                            <div class="detail-section">
+                                <span class="detail-label">Primary Proponent</span>
+                                <div class="detail-text">${theory.proponent} (${theory.year})</div>
+                            </div>
+                            <div class="detail-section">
+                                <span class="detail-label">Classification</span>
+                                <div class="detail-text">
+                                    <span class="evidence-tag">CONFIDENTIAL</span>
+                                    <span class="evidence-tag">EYES ONLY</span>
+                                    <span class="redacted">[REDACTED]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(detailRow);
+            });
+
+            document.getElementById('currentPage').textContent = currentPage;
+            document.getElementById('totalPages').textContent = Math.ceil(filteredTheories.length / itemsPerPage);
+        }
+
+        function toggleExpand(id) {
+            const detail = document.getElementById(`detail-${id}`);
+            detail.style.display = detail.style.display === 'table-row' ? 'none' : 'table-row';
+        }
+
+        function filterTable() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            const severity = document.getElementById('severityFilter').value;
+
+            filteredTheories = theories.filter(t => {
+                const matchesSearch = t.claim.toLowerCase().includes(search) || 
+                                    t.id.toLowerCase().includes(search) ||
+                                    t.evidence.toLowerCase().includes(search);
+                const matchesCategory = !category || t.category === category;
+                const matchesSeverity = !severity || t.severity === severity;
+                
+                return matchesSearch && matchesCategory && matchesSeverity;
+            });
+
+            currentPage = 1;
+            renderTable();
+            updateStats();
+        }
+
+        function sortTable(column) {
+            if (sortColumn === column) {
+                sortDirection *= -1;
+            } else {
+                sortColumn = column;
+                sortDirection = 1;
+            }
+
+            const keys = ['id', 'category', 'severity', 'claim', 'evidence', 'counter', 'status'];
+            const key = keys[column];
+
+            filteredTheories.sort((a, b) => {
+                if (a[key] < b[key]) return -1 * sortDirection;
+                if (a[key] > b[key]) return 1 * sortDirection;
+                return 0;
+            });
+
+            renderTable();
+        }
+
+        function toggleDebunked() {
+            showDebunked = !showDebunked;
+            renderTable();
+        }
+
+        function updateStats() {
+            document.getElementById('totalTheories').textContent = filteredTheories.length;
+            document.getElementById('technicalCount').textContent = 
+                filteredTheories.filter(t => t.category === 'Technical').length;
+            document.getElementById('photoCount').textContent = 
+                filteredTheories.filter(t => t.category === 'Photographic').length;
+            document.getElementById('highSeverity').textContent = 
+                filteredTheories.filter(t => t.severity === 'High').length;
+        }
+
+        function exportCSV() {
+            let csv = 'ID,Category,Severity,Claim,Evidence,Counter,Status,Proponent,Year\n';
+            filteredTheories.forEach(t => {
+                csv += `"${t.id}","${t.category}","${t.severity}","${t.claim}","${t.evidence}","${t.counter}","${t.status}","${t.proponent}","${t.year}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'project_luna_database.csv';
+            a.click();
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(filteredTheories.length / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable();
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable();
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', filterTable);
+        document.getElementById('categoryFilter').addEventListener('change', filterTable);
+        document.getElementById('severityFilter').addEventListener('change', filterTable);
+
+        init();
+    </script>
+</body>
+</html>
